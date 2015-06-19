@@ -13,7 +13,7 @@
 #$ -V
 
 # Default directories
-SOFTWARE_ROOT="/rawdata/legos" # used for flags.sh
+SOFTWARE_ROOT="/rawdata/scripts/TRI_Scripts" # used for flags.sh
 PICARD_TOOLS_DIR="/opt/picard/picard-tools-current"
 COV_ANALYSIS_DIR="/results/plugins/coverageAnalysis"
 VARIANT_CALLER_DIR="/results/plugins/variantCaller"
@@ -170,12 +170,12 @@ fi
 function checkFlags {
 	# Remove or flag the duplicates according to what the user specified.
 	if [ "$REMOVE_DUP_FLAGS" == "True" ]; then
-		bash ${SOFTWARE_ROOT}/scripts/flags.sh \
+		bash ${SOFTWARE_ROOT}/QC/flags.sh \
 			$BAM_FILE \
 			--remove_dup \
 			--cleanup
 	elif [ "$FLAG_DUPS" == "True" ]; then
-		bash ${SOFTWARE_ROOT}/scripts/flags.sh \
+		bash ${SOFTWARE_ROOT}/QC/flags.sh \
 			$BAM_FILE \
 			--flag_dups 
 
@@ -359,7 +359,8 @@ if [ "$CLEANUP" == "True" ]; then
 	mv ${OUTPUT_DIR}/tvc${TVC_VERSION}_out/TSVC_variants.vcf ${OUTPUT_DIR}/${TVC_VERSION}_TSVC_variants.vcf 2>/dev/null 
 
 	rm -rf ${OUTPUT_DIR}/cov_full 2>/dev/null
-	rm -rf ${OUTPUT_DIR}/tvc${TVC_VERSION}_out 2>/dev/null
+#	rm -rf ${OUTPUT_DIR}/tvc${TVC_VERSION}_out 2>/dev/null
+	mv ${OUTPUT_DIR}/tvc${TVC_VERSION}_out ${OUTPUT_DIR}/tvc${TVC_VERSION}_output 2>/dev/null
 #	rm ${BAM_FILE}.bai 2>/dev/null
 fi
 exit 0

@@ -9,6 +9,8 @@ import subprocess
 import json
 import QC_stats
 from optparse import OptionParser
+from write_vars import Var_Writer
+import glob
 try:
 	import xlsxwriter
 	from xlsxwriter.utility import xl_rowcol_to_cell
@@ -526,6 +528,7 @@ if (__name__ == "__main__"):
 	parser.add_option('-S', '--sheet_per_sample', dest='sheet_per_sample', action="store_true", default=False, help="Will write a new sheet containing the 3x3 table comparisons per sample.")
 	parser.add_option('-o', '--out', dest='out', default='QC.xlsx', help='Specify the output xlsx file [default: %default]')
 	parser.add_option('-j', '--ex_json', dest='ex_json', help='An example sample json file containing analysis settings which we can use for this spreadsheet. (with the -r option)')
+	parser.add_option('-V', '--write_vars', dest='write_vars', action="store_true", help='Write only the variants for PNET somatic')
 	
 	# Gets all of the command line arguments specified and puts them into the dictionary args
 	(options, args) = parser.parse_args()
@@ -547,35 +550,46 @@ if (__name__ == "__main__"):
 	workbook = xlsxwriter.Workbook(options.out)
 	# add the self.formats and such to the workbook
 	xlsx_writer = XLSX_Writer(workbook)
-	if options.sheet_per_sample:
-		xlsx_writer.sheet_per_sample = True
-	else:
-		xlsx_writer.sheet_per_sample = False
 
-	runs_json_data = {}
-	QC_3x3_json_data = {}
-	# Get the data available by finding the json files in the sample_path specified.
-	for sample_path in options.sample_paths:
-		sample_path = os.path.abspath(sample_path)
-		# if the 3x3 tables are not the only thing you want, then get the QC run metrics
+	if options.write_vars:
+		var_writer = Var_Writer(xlsx_writer)
+		# keep everything as a tsv because there are multiple csvs in the Somatic_Variants dir
+		#tsv = sorted(glob.glob("%s/*.tsv"%(options.sample_paths[0])))[0]
+		for tsv in sorted(glob.glob("%s/*.tsv"%(options.sample_paths[0]))):
+			print "writing tsv %s"%tsv
+			sample = tsv.split('/')[-1].split('.tsv')[0]
+			sheet = workbook.add_worksheet(sample)
+			var_writer.writeVarMetrics(tsv, sheet)
+	else: 
+		if options.sheet_per_sample:
+			xlsx_writer.sheet_per_sample = True
+		else:
+			xlsx_writer.sheet_per_sample = False
+
+		runs_json_data = {}
+		QC_3x3_json_data = {}
+		# Get the data available by finding the json files in the sample_path specified.
+		for sample_path in options.sample_paths:
+			sample_path = os.path.abspath(sample_path)
+			# if the 3x3 tables are not the only thing you want, then get the QC run metrics
+			if not options.qc_info_only:
+				runs_json_data = dict(runs_json_data.items() + QC_stats.main_runs_only(sample_path).items())
+			# if the QC run metrics are not the only thing you want, then get the 3x3 tables
+			if not options.run_info_only:
+				QC_3x3_json_data = dict(QC_3x3_json_data.items() + QC_stats.main_QC_only(sample_path).items())
+
 		if not options.qc_info_only:
-			runs_json_data = dict(runs_json_data.items() + QC_stats.main_runs_only(sample_path).items())
-		# if the QC run metrics are not the only thing you want, then get the 3x3 tables
+			ex_json_data = None
+			if options.ex_json:
+				if not os.path.isfile(options.ex_json):
+					print "%s is not found. Unable to use it as an example"
+				else:
+					ex_json_data = json.load(open(options.ex_json))
+			print "	Generating the main run QC run metrics Spreadsheet" 
+			xlsx_writer.writeRunMetrics(runs_json_data, ex_json_data)
 		if not options.run_info_only:
-			QC_3x3_json_data = dict(QC_3x3_json_data.items() + QC_stats.main_QC_only(sample_path).items())
-
-	if not options.qc_info_only:
-		ex_json_data = None
-		if options.ex_json:
-			if not os.path.isfile(options.ex_json):
-				print "%s is not found. Unable to use it as an example"
-			else:
-				ex_json_data = json.load(open(options.ex_json))
-		print "	Generating the main run QC run metrics Spreadsheet" 
-		xlsx_writer.writeRunMetrics(runs_json_data, ex_json_data)
-	if not options.run_info_only:
-		print "	Generating the 3x3 QC table Spreadsheets" 
-		xlsx_writer.write3x3Tables(QC_3x3_json_data)
+			print "	Generating the 3x3 QC table Spreadsheets" 
+			xlsx_writer.write3x3Tables(QC_3x3_json_data)
 	
 	print "Finished generating the QC table: " + options.out
 	xlsx_writer.workbook.close()

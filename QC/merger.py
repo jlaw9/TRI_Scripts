@@ -20,7 +20,7 @@ class Merger:
 	# @param cleanup Flag to delete the temporary files or not. Default: false
 	def __init__(self, sample_json, recalc_3x3_tables):
 		if sample_json:
-			self.sample_json = json.load(open(sample_json))
+			self.sample_json = sample_json
 		self.merge_dir = ''
 		self.bams_to_merge = []
 		self.runs_to_merge = []
@@ -104,7 +104,7 @@ class Merger:
 		pass_fail_merged_status = 'pass'
 		run_json = json.load(open(run))
 		if run_json['run_type'] == 'germline':
-			merged_perc_aval_bases = run_json['run_data']['amp_cov']
+			merged_perc_avail_bases = run_json['run_data']['amp_cov']
 		#print merged_perc_avail_bases, self.sample_json['analysis']['settings']['cutoffs']['merged_amp_cov']
 		# check to see if >90% of the bases are shared between the tumor normal comparison 
 		if 'merged_amp_cov' in self.sample_json['analysis']['settings']['cutoffs'] and merged_perc_avail_bases != '':
@@ -154,7 +154,9 @@ class Merger:
 			# else don't remerge these files
 			if len(self.bams_to_merge) == 1:
 				# There is only one run, so don't merge it. Set the "final_%sjson"%pref flag to show what the final run is
+				print "setting %s as the 'final_%sjson'"%(run, pref)
 				self.sample_json["final_%sjson"%pref] = run
+				write_json(self.sample_json['json_file'], self.sample_json) 
 			# use the 'merged_json' flag rather than the 'final_json' flag because 'final_json' can be set by a single non-merged run.
 			elif 'merged_%sjson'%pref in self.sample_json and os.path.isfile(self.sample_json['merged_%sjson'%pref]):
 				merged_json_data = json.load(open(self.sample_json['merged_%sjson'%pref]))
@@ -180,7 +182,7 @@ class Merger:
 				# Add one to the merged_count
 				self.sample_json['merged_%scount'%pref] += 1
 				merge = True
-		return merge
+		return self.sample_json, merge
 
 
 	# merge the runs of a sample
@@ -253,8 +255,7 @@ class Merger:
 			# Add a path to the final merged_json
 			self.sample_json["final_%sjson"%pref] = self.merged_json
 
-		# write the modified sample_json file
-		write_json(self.sample_json['json_file'], self.sample_json)
+		return self.sample_json
 
 
 # If we need this script to run on its own, update it when it is needed

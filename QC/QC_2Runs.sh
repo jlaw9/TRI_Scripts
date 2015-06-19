@@ -15,8 +15,9 @@
 #$ -V
 
 
-SOFTWARE_ROOT="/rawdata/legos"
-QC_SCRIPTS="${SOFTWARE_ROOT}/scripts/QC"
+# Software root set by an option
+#SOFTWARE_ROOT="/rawdata/scripts/TRI_Scripts"
+#QC_SCRIPTS="${SOFTWARE_ROOT}/QC"
 #QC_MASTER_OUT="$QC_SCRIPTS/QC_Out_Files/multiple_runs.csv"
 BAM_INDEXER='/opt/picard/picard-tools-current/BuildBamIndex.jar'
 VARIANT_CALLER_DIR='/results/plugins/variantCaller'
@@ -45,6 +46,7 @@ All options up to --gt_cutoffs are required.
 	-chr | --subset_chr <chr#> (The chromosome specified here (for example: chr1) will be used to subset the VCF and BAM files)
 	-cl | --cleanup (If calling QC_getRunInfo.sh after this script, the PRTIM.bam is needed so DO NOT CALL CLEANUP. Delete temp_files used to create the two Output VCF files, the PTRIM.bam the chr_subset bam files if they were created.)
 	-B | --bases <total_eligible_bases> <total_possible_bases> (If these total bases have already been calculated you can include them here)
+	-s | --software_dir </path/to/QC_Scripts>
 EOF
 exit 8
 }
@@ -347,6 +349,11 @@ do
 			CLEANUP="True"
 			RUNNING="$RUNNING --cleanup "
 			shift
+			;;
+		-s | --software_dir) 
+			QC_SCRIPTS=$2
+			RUNNING="$RUNNING --software_dir: $2 "
+			shift 2
 			;;
 		-*)
 			printf >&2 'WARNING: Unknown option (ignored): %s\n' "$1"

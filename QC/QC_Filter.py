@@ -49,7 +49,7 @@ class QC_Filter:
 			else:
 				line_arr = line.strip().split('\t')
 				# if the varian passes all of these filters, then keep it
-				if self.duplicate_filter(line_arr) and self.multiple_alleles_filter(line_arr, self.options.multi_allele_max_freq) and self.coverage_filter(line_arr, self.options.min_base_cov):
+				if self.duplicate_filter(line_arr) and self.coverage_allele_Filters(line_arr, self.options.min_base_cov, self.options.multi_allele_max_freq):
 					self.filtered_vcf.write(line)
 				# otherwise throw it away
 				elif self.options.vars_filtered:
@@ -84,57 +84,45 @@ class QC_Filter:
 			return False
 
 	# @param line_arr Check to see if this variant has > 2 alleles
-	# @param multi_allele_max_freq The maximum allele frequency for multiple alleles (i.e. if > 2 alleles have a frequency > specified cutoff, the variant will be removed)
-	# @returns true or false
-	def multiple_alleles_filter(self, line_arr, multi_allele_max_freq=.05):
-		# Don't keep variants that have a Multi allelic call. We are diploid and should therefore only have two alleles	
-		if not re.search(",", line_arr[4]): 
-			return True 
-		else:
-			self.multiple_variants_removed += 1
-			return False
-
-	# @param line_arr Check to see if this variant has enough coverage
 	# @param min_base_cov A list where each value is the minimum base coverage for each sample listed in the vcf.
+	# @param multi_allele_max_freq The maximum allele frequency for multiple alleles (i.e. if > 2 alleles have a frequency > specified cutoff, the variant will be removed). I went with a more conservative approach just because.
 	# @returns true or false
-	def coverage_filter(self, line_arr, min_base_cov):
-		passes = True
+	def coverage_allele_Filters(self, line_arr, min_base_cov, multi_allele_max_freq):
 		# loop through the info columns. The coverages passed in by the min_base_cov option should correspond to the columns or samples in the vcf file.
 		for i in range(0,len(line_arr)-9):
-			# Creates a dictionary with the description as the key, and the actual value as the value.	
 			vcfInfo = dict(zip(line_arr[8].split(":"), line_arr[9+i].split(":")))   
-			# Returns the FRO + FAO values.
-			depth = self.get_depth(vcfInfo)
-			if depth != None and depth < min_base_cov[i]:
-				passes = False
-		if not passes:
-			self.coverage_variants_removed += 1
-		return passes
-				
-	# @param Takes in a dictionary with the key as the description of a variant, and the value as the value of that description.
-	# @returns Returns the amount of variants that were filtered (depth was not > cutoff in either vcf file).
-	def get_depth(self, vcfInfo):
-		alt_depth = ''
-		ref_depth = ''
-		try: 
-			# Ion Reporter says the following about using FAO and FRO rather than AO and RO:
-			# FAO is usually equal to AO; however, due to complex alleles and/or downsampling*, FAO may differ from AO.
-			# AF=FAO/(FAO+FRO) and not FAO/FDP. This is because FDP may include reads that don't fit the flow space profile of any hypothesis; in such cases, FDP>=FAO+FRO and this is not used in allele frequency calculation.
-			# Exception: When flow correction is not performed and there are no F tags in the VCF file, then DP=AO+RO and AF=AO/DP.
-			if 'FAO' in vcfInfo and vcfInfo['FAO'] != '.':   # Ozlem said that the frequency depth score is better than the regular depth score, so use that if we can.
-				alt_depth = vcfInfo['FAO']
-				ref_depth = vcfInfo['FRO']
-			elif 'AO' in vcfInfo:
-				alt_depth = vcfInfo['AO']
-				ref_depth = vcfInfo['RO']
+
 			# if this is a merged VCF, the variants that were found in one run but not the other will be labelled at a '.' We want to keep them for the hotspot refilling
-			elif vcfInfo['GT'] == '.':
-				return
-			total_depth = int(alt_depth) + int(ref_depth)
-			return total_depth
-		except KeyError:
-			print "KEY ERROR: in the vcf file. Leaving this variant."
-			return
+			if vcfInfo['GT'] == '.':
+				return True
+
+			try:
+				# We are diploid and should therefore only have two alleles
+				if 'FAO' not in vcfInfo:
+					orig_alleles = vcfInfo['AO'].split(',') + [vcfInfo['RO']]
+				else:
+					orig_alleles = vcfInfo['FAO'].split(',') + [vcfInfo['FRO']]
+				# remove the alleles for which we have no GT information. Those will be filled in with a hotspot later.
+				alleles = filter(lambda x: x != '.', orig_alleles) 
+				total_cov = reduce(lambda x,y: int(x)+int(y), alleles)
+				valid_alleles = filter(lambda x : (float(x)/total_cov) > multi_allele_max_freq[i], alleles)
+				total_valid_cov = reduce(lambda x,y: int(x)+int(y), valid_alleles)
+				# need to implement a new filter so that the alleles that are representative of the person are kept
+				# even if those are two alternate alleles. For now, just stick with what we had
+				# Would have to update QC_Compare_VCFs. IF both alleles are alternates, should that cell be marked as HOM alt? If only one alternate allele is real, should the other alternate allele be removed?
+				#if len(valid_alleles) > 2: 
+				if len(orig_alleles) > 2: 
+					self.multiple_variants_removed += 1
+					return False
+				elif total_valid_cov < min_base_cov[i]:
+					self.coverage_variants_removed += 1
+					return False
+				else:
+					return True
+			except KeyError:
+				print "KEY ERROR: in the vcf file. Leaving this variant."
+				return True
+			
 
 # ----------------------------------------------------
 # ------------- PROGRAM STARTS HERE ------------------
@@ -161,5 +149,9 @@ if __name__ == "__main__":
 		parser.print_help()
 		#print "use -h for help"
 		sys.exit(8)
+
+	# set the default value if it's not specified
+	if not options.multi_allele_max_freq:
+		options.multi_allele_max_freq = [0.05]*len(options.min_base_cov)
 
 	QC_Filter(options)

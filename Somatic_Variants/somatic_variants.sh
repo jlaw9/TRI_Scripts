@@ -25,11 +25,12 @@ CHR="$3"
 SV_SCRIPTS="/home/ionadmin//TRI_Scripts/Somatic_Variants"
 
 #first extract the somatic variants
-grep -E "WT.+HET" ${DIR}/matched_variants${CHR}.csv > ${SV_DIR}/somatic.csv
+python ${SV_SCRIPTS}/maf_filter.py ${DIR}/matched_variants${CHR}.csv | grep -E "WT.+HET"  > ${SV_DIR}/somatic.csv
 
 # copy the variant if there is only one so that Ozlem's scripts will work
 if [ "`head ${SV_DIR}/somatic.csv | wc -l `" == "1" ]; then
-	grep -E "WT.+HET" ${DIR}/matched_variants${CHR}.csv >> ${SV_DIR}/somatic.csv
+	python ${SV_SCRIPTS}/maf_filter.py ${DIR}/matched_variants${CHR}.csv | grep -E "WT.+HET"  >> ${SV_DIR}/somatic.csv
+	#grep -E "WT.+HET" ${DIR}/matched_variants${CHR}.csv >> ${SV_DIR}/somatic.csv
 fi
 
 
@@ -56,15 +57,18 @@ python2.7 ${SV_SCRIPTS}/updateAnnovarTable_v3.py \
 	${SV_DIR}/somatic.csv \
 	${SV_DIR}/annovar_somatic_table.hg19_multianno.txt \
 	${SV_SCRIPTS}/transcriptList.txt \
-	${SV_DIR}/annovar_summary.txt 
+	${SV_DIR}/${SAMPLE}_somatic.tsv
 
 # Ozlem's notes about the transcriptList.txt file: I believe this is the canonical transcript list for whole exome (I wish I had time to double-check though!) so please keep in mind that I did not have a chance to double-check: /results/ozlem/pnet_merge_analysis/transcriptList.txt.        
 # Just noticed that somatic.vcf has duplicate entries, will need to correct this 
 
+# generate an xlsx file 
+python2.7 /rawdata/legos/scripts/QC/QC_generateSheets.py -s $SV_DIR -V -o ${DIR}/../${SAMPLE}_somatic.xlsx
+
 # copy the final file back to my dir
-echo "copying ${SV_DIR}/annovar_summary.txt to /home/ionadmin/jeff/Lung_Somatic/"
-mkdir -p /home/ionadmin/jeff/Lung_Somatic/
-cp ${SV_DIR}/annovar_summary.txt /home/ionadmin/jeff/Lung_Somatic/${SAMPLE}_somatic.vcf
+echo "copying ${SV_DIR}/annovar_summary.txt to /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei"
+mkdir -p /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei
+cp ${SV_DIR}/${SAMPLE}_somatic.tsv /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei/${SAMPLE}_somatic.tsv
 if [ $? != 0 ]; then
 	echo "Failed!"
 	exit 1

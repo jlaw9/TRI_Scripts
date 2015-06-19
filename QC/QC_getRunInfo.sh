@@ -16,9 +16,10 @@
 #$ -V
 
 
+# Software root set by an option
+#SOFTWARE_ROOT="/rawdata/legos"
+#QC_SCRIPTS="${SOFTWARE_ROOT}/scripts/QC"
 # Define file paths
-SOFTWARE_ROOT="/rawdata/legos"
-QC_SCRIPTS="${SOFTWARE_ROOT}/scripts/QC"
 BAM_INDEXER='/opt/picard/picard-tools-current/BuildBamIndex.jar'
 GATK="/results/plugins/variantCaller/TVC/jar/GenomeAnalysisTK.jar"
 REF_FASTA="/results/referenceLibrary/tmap-f3/hg19/hg19.fasta"
@@ -41,6 +42,7 @@ USAGE: bash QC_getRunInfo.sh
 	-cb | --cds_bed <path/to/CDS_bed> (Optional. Only available if the Run has a PTRIM.bam. Run GATK on the CDS region of the bed file)
 	-pl | --pool_dropout	(Optional. Will include the pool dropout script.)
 	-cl | --cleanup (Optional. Will delete the file specified as --out_dir after generating the QC metrics needed.)
+	-s | --software_dir </path/to/QC_Scripts>
 EOF
 exit 8
 }
@@ -149,6 +151,11 @@ do
 			CLEANUP="True"
 			RUNNING="$RUNNING --cleanup "
 			shift
+			;;
+		-s | --software_dir) 
+			QC_SCRIPTS=$2
+			RUNNING="$RUNNING --software_dir: $2 "
+			shift 2
 			;;
 		-*)
 			printf >&2 'WARNING: Unknown option (ignored): %s\n' "$1"

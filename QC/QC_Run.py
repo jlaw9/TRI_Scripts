@@ -11,11 +11,10 @@ from tools import *
 class QC_Run:
 	# nothing to do here so far...
 	def __init__(self, sample_json, recalc_3x3_tables):
-		self.__softwareDirectory = "/rawdata/legos"
-		self.__QCDirectory = "/rawdata/legos/scripts/QC"
 		self.no_errors = True
 		self.sample_json = sample_json
 		self.recalc_3x3_tables = recalc_3x3_tables
+		self.__QCDirectory = "%s/QC"%self.sample_json['analysis']['software_directory']
 
 	# get the separate the runs of the sample by status
 	def get_runs_status(self, runs):
@@ -29,13 +28,14 @@ class QC_Run:
 				# only the runs that pass both of these cutoffs will be used to merge
 				elif run_json['pass_fail_status'] == 'pass':
 					if len(runs) > 1:
-						if 'pass_fail_3x3_status' in run_json and (run_json['pass_fail_3x3_status'] == 'pending' or run_json['pass_fail_3x3_status'] == 'pass'):
+						if 'pass_fail_3x3_status' not in run_json or (run_json['pass_fail_3x3_status'] == 'pending' or run_json['pass_fail_3x3_status'] == 'pass'):
 							passing_runs.append(run)
 					# if there is only 1 run, then it won't have a pass_fail_3x3_status. it passes.
 					else:
 						passing_runs.append(run)
 			except ValueError:
 				pass
+		print "pending: %s, passing: %s"%(pending_runs, passing_runs)
 		return pending_runs, passing_runs
 
 
@@ -63,7 +63,7 @@ class QC_Run:
 			   coverageAnalysisFlag = '--targetseq'
 	
 		for file in run_json['analysis']['files']:
-			command = 'bash %s/scripts/runTVC_COV.sh '%self.__softwareDirectory + \
+			command = 'bash %s/runTVC_COV.sh '%self.__QCDirectory + \
 					'--ptrim PTRIM.bam ' + \
 					'--cleanup %s %s '%(dupFlag, coverageAnalysisFlag) + \
 					'--cov %s %s '%(self.sample_json['analysis']['settings']['qc_merged_bed'], self.sample_json['analysis']['settings']['qc_unmerged_bed']) + \
@@ -98,7 +98,8 @@ class QC_Run:
 					"--beg_bed  %s "%self.sample_json['analysis']['settings']['beg_bed'] + \
 					"--end_bed %s "%self.sample_json['analysis']['settings']['end_bed'] + \
 					"--project_bed %s "%str(self.sample_json['analysis']['settings']['project_bed']) + \
-					"--ptrim_json %s/PTRIM.bam "%run_json['run_folder']
+					"--ptrim_json %s/PTRIM.bam "%run_json['run_folder'] + \
+					"--software_dir %s "%self.__QCDirectory
 			#if [ "$CDS_BED" != "" ]; then
 			#	qcgetruninfo="$qcgetruninfo --cds_bed $CDS_BED "
 			# QC_getRunInfo's will run the pool dropout script if it hasn't already been calculated
@@ -182,7 +183,8 @@ class QC_Run:
 				"-a %s "%sample_json['analysis']['settings']['min_amplicon_coverage'] + \
 				"-jp %s %s "%(sample_json['analysis']['settings']['%stvc_json'%pref1], sample_json['analysis']['settings']['%stvc_json'%pref2]) + \
 				"-d %s %s "%(sample_json['analysis']['settings']['%smin_base_coverage'%pref1], sample_json['analysis']['settings']['%smin_base_coverage'%pref2]) + \
-				"-gt %s %s %s %s "%(sample_json['analysis']['settings']['%swt_cutoff'%pref1], sample_json['analysis']['settings']['%shom_cutoff'%pref1], sample_json['analysis']['settings']['%swt_cutoff'%pref2], sample_json['analysis']['settings']['%shom_cutoff'%pref2])
+				"-gt %s %s %s %s "%(sample_json['analysis']['settings']['%swt_cutoff'%pref1], sample_json['analysis']['settings']['%shom_cutoff'%pref1], sample_json['analysis']['settings']['%swt_cutoff'%pref2], sample_json['analysis']['settings']['%shom_cutoff'%pref2]) + \
+				"--software_dir %s "%self.__QCDirectory
 				#"--cleanup " # The main cleanup will be done at the end of this script because the PTRIM.bam is needed for QC_getRunInfo.sh, and the chr_subset is needed for each run comparison.
 
 				# subset this specified chromosome
@@ -193,13 +195,12 @@ class QC_Run:
 					qc2runs += "--subset_chr %s "%chromosome
 	
 				# if the recalc option is specified, we might be able to pass in the total eligible and possible bases because those shouldn't change (unless the amplicon cutoff is changed from 30x).
-				if self.recalc_3x3_tables and 'old_GTs' in qc_json_data and 'QC_comparisons' in qc_json_data['old_GTs'] and \
-					chromosome in qc_json_data['old_GTs']['QC_comparisons'] and comp_type in qc_json_data['old_GTs']['QC_comparisons'][chromosome] and \
-					run1vsrun2 in qc_json_data['old_GTs']['QC_comparisons'][chromosome][comp_type]:
+				if self.recalc_3x3_tables and 'old_GTs' in qc_json_data and chromosome in qc_json_data['old_GTs'] and comp_type in qc_json_data['old_GTs'][chromosome] and \
+					run1vsrun2 in qc_json_data['old_GTs'][chromosome][comp_type]:
 					# get the bases and add them to the command
 					# recalculate the total_possible_bases
-					total_possible_bases = int(1 / (qc_json_data['old_GTs']['QC_comparisons'][chromosome][comp_type]['perc_avail_bases'] / qc_json_data['old_GTs']['QC_comparisons'][chromosome][comp_type]['total_eligible_bases']))
-					qc2runs += "--bases %s %s "%(qc_json_data['old_GTs']['QC_comparisons'][chromosome][comp_type]['total_eligible_bases'], total_possible_bases)
+					total_possible_bases = int(1 / (qc_json_data['old_GTs'][chromosome][comp_type][run1vsrun2]['perc_avail_bases'] / qc_json_data['old_GTs'][chromosome][comp_type][run1vsrun2]['total_eligible_bases']))
+					qc2runs += "--bases %s %s "%(qc_json_data['old_GTs'][chromosome][comp_type][run1vsrun2]['total_eligible_bases'], total_possible_bases)
 		
 				#run the qc2runs command
 				sys.stdout.write("Running: %s  at: %s\n"%(qc2runs, getTimestamp()))
