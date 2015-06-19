@@ -14,15 +14,17 @@ DIR="$1"
 SAMPLE="$2"
 mkdir -p "${DIR}/Somatic_Variants"
 SV_DIR="${DIR}/Somatic_Variants"
-CHR="$3"
+SOFTWARE_DIR="$3"
+#Somatic Variants scripts DIR
+SV_SCRIPTS="${SOFTWARE_DIR}/Somatic_Variants"
+CHR="$4"
+
 
 #if [ "`find /home/ionadmin/jeff/Lung_Somatic/${SAMPLE}_somatic.vcf 2>/dev/null`" ]; then
 #	echo "The somatic variants for $SAMPLE have already been annotated. Skipping"
 #	exit 0
 #fi
 
-#Somatic Variants scripts DIR
-SV_SCRIPTS="/home/ionadmin//TRI_Scripts/Somatic_Variants"
 
 #first extract the somatic variants
 python ${SV_SCRIPTS}/maf_filter.py ${DIR}/matched_variants${CHR}.csv | grep -E "WT.+HET"  > ${SV_DIR}/somatic.csv
@@ -66,9 +68,9 @@ python2.7 ${SV_SCRIPTS}/updateAnnovarTable_v3.py \
 python2.7 /rawdata/legos/scripts/QC/QC_generateSheets.py -s $SV_DIR -V -o ${DIR}/../${SAMPLE}_somatic.xlsx
 
 # copy the final file back to my dir
-echo "copying ${SV_DIR}/annovar_summary.txt to /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei"
-mkdir -p /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei
-cp ${SV_DIR}/${SAMPLE}_somatic.tsv /home/ionadmin/jeff/Lung_Somatic/Low_Stringency_Jingwei/${SAMPLE}_somatic.tsv
+echo "copying ${SV_DIR}/annovar_summary.txt to /home/ionadmin/jeff/Lung_Somatic"
+mkdir -p /home/ionadmin/jeff/Lung_Somatic
+cp ${SV_DIR}/${SAMPLE}_somatic.tsv /home/ionadmin/jeff/Lung_Somatic/${SAMPLE}_somatic.tsv
 if [ $? != 0 ]; then
 	echo "Failed!"
 	exit 1

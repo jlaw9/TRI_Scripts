@@ -149,7 +149,7 @@ class QC_Sample:
 				if merged_perc_avail_bases > .9:
 					final_qc_dir = "%s/all%svs%s"%(self.sample_json['qc_folder'], json.load(open(self.sample_json['final_normal_json']))['run_name'], json.load(open(self.sample_json['final_tumor_json']))['run_name'])
 					# annotate the final somatic variants
-					command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s"%(self.sample_json['analysis']['software_directory'], final_qc_dir, self.sample_json['sample_name'])
+					command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s %s"%(self.sample_json['analysis']['software_directory'], final_qc_dir, self.sample_json['sample_name'], self.sample_json['analysis']['software_directory'])
 					if runCommandLine(command) != 0:
 						sys.stderr.write("ERROR: somatic annotation failed!\n")
 	
@@ -509,7 +509,7 @@ class QC_Sample:
 				qc_comp_dir = "%s/QC/all%svs%s"%(self.sample_json['sample_folder'], final_normal_json['run_name'], final_tumor_json['run_name'])
 				# get the somatic variants using the somatic_variants.sh script which utilizes Ozlem's scripts.
 				#TODO "import" Ozlem's scripts into this pipeline
-				command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s"%(self.sample_json['analysis']['software_directory'], qc_comp_dir, self.sample_json['sample_name'])
+				command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s %s"%(self.sample_json['analysis']['software_directory'], qc_comp_dir, self.sample_json['sample_name'], self.sample_json['analysis']['software_directory'])
 				result = os.system(command)
 				if result != 0:
 					self.no_errors = False
