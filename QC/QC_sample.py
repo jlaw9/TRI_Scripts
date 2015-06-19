@@ -265,7 +265,7 @@ class QC_Sample:
 					# TODO add germline project variants as well.
 					somatic_variants = "%s/%s_somatic.xlsx"%(self.sample_json['qc_folder'], self.sample_json['sample_name'])
 					if os.path.isfile(somatic_variants):
-						email_command = '\tprintf "%s finished with a status of %s. \\n`grep sample_status *.json`\\n" | (cat -; uuencode %s %s; uuencode %s %s) | ssmtp -vvv %s >/dev/null 2>&1\n' % (self.sample_json['sample_name'], "pass", xlsx_file, xlsx_file.split('/')[-1], somatic_variants, somatic_variants, email)
+						email_command = '\tprintf "%s finished with a status of %s. \\n`grep sample_status *.json`\\n" | (cat -; uuencode %s %s; uuencode %s %s) | ssmtp -vvv %s >/dev/null 2>&1\n' % (self.sample_json['sample_name'], "pass", xlsx_file, xlsx_file.split('/')[-1], somatic_variants, somatic_variants.split('/')[-1], email)
 					else:
 						email_command = '\tprintf "%s finished with a status of %s. \\n`grep sample_status *.json`\\n" | (cat -; uuencode %s %s) | ssmtp -vvv %s >/dev/null 2>&1\n' % (self.sample_json['sample_name'], "pass", xlsx_file, xlsx_file.split('/')[-1], email)
 					runCommandLine(email_command)
@@ -632,6 +632,7 @@ if __name__ == '__main__':
 	# add the options to parse
 	parser.add_option('-j', '--json', dest='json', help="A sample's json file which contains the necessary options and list of runs to QC with each other")
 	parser.add_option('-e', '--email', dest='email', action='store_true', help="Option to send an email when job finishes")
+	# The rest of these options are all more of temporary fixes or analyses I didn't want to put in the main workflow.
 	parser.add_option('-q', '--qc_all', dest='qc_all', action='store_true', help="Generate the 3x3 tables for all run comparisons, even if they fail.")
 	parser.add_option('-p', '--pass_fail', dest='pass_fail', action='store_true', help="Overwrite the 'pass/fail' status of each run according to the cutoffs found in the json file. Normally this step is skipped if all runs have finished the QC process, but this option will overwrite the 'pass/fail' status found.")
 	parser.add_option('-r', '--recalc_3x3_tables', dest='recalc_3x3_tables', action='store_true', help="recalculate the 3x3 tables (original use was for the new GT cutoffs")
