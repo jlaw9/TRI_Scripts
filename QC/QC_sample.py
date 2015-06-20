@@ -311,7 +311,7 @@ class QC_Sample:
 		target_json_file = "Einstein/%s/%s"%(self.sample_json['sample_name'], final_json_file.split('/')[-1])
 	
 		# call the push_files script to push each file to s3 storage
-		status = os.system("bash /rawdata/scripts/TRI_Dev/push_files_s3.sh " + \
+		status = runCommandLine("bash /rawdata/scripts/TRI_Dev/push_files_s3.sh " + \
 				"%s %s "%(final_vcf, target_vcf) + "%s %s "%(final_cov, target_cov) + \
 				"%s %s "%(final_bam, target_bam) + "%s %s "%(final_bai, target_bai) + \
 				"%s %s "%(final_json_file, target_json_file))
@@ -510,7 +510,7 @@ class QC_Sample:
 				# get the somatic variants using the somatic_variants.sh script which utilizes Ozlem's scripts.
 				#TODO "import" Ozlem's scripts into this pipeline
 				command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s %s"%(self.sample_json['analysis']['software_directory'], qc_comp_dir, self.sample_json['sample_name'], self.sample_json['analysis']['software_directory'])
-				result = os.system(command)
+				result = runCommandLine(command)
 				if result != 0:
 					self.no_errors = False
 				self._make_xlsx()
@@ -554,7 +554,7 @@ class QC_Sample:
 				# get the somatic variants using the somatic_variants.sh script which utilizes Ozlem's scripts.
 				#TODO "import" Ozlem's scripts into this pipeline
 				command = "bash %s/Somatic_Variants/somatic_variants.sh %s %s"%(self.sample_json['analysis']['software_directory'], qc_comp_dir, self.sample_json['sample_name'])
-				result = os.system(command)
+				result = runCommandLine(command)
 				if result != 0:
 					self.no_errors = False
 				#self._make_xlsx()
