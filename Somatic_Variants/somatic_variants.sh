@@ -41,8 +41,8 @@ python2.7 ${SV_SCRIPTS}/getVCF_v2.py ${SV_DIR}/somatic.csv ${DIR}/VCF2${CHR}_Fin
 
 # Annotate the somatic variants with table annovar. 
 # I know we updated some of the annovar code in the file /home/ionadmin//TRI_Scripts/annovar/annotate_variation.pl starting on line 1552
-/home/ionadmin//TRI_Scripts/annovar/convert2annovar.pl --format vcf4old --snpqual 0 ${SV_DIR}/somatic.vcf > ${SV_DIR}/somatic_input.vcf
-/home/ionadmin//TRI_Scripts/annovar/table_annovar.pl \
+${SOFTWARE_DIR}/annovar/convert2annovar.pl --format vcf4old --snpqual 0 ${SV_DIR}/somatic.vcf > ${SV_DIR}/somatic_input.vcf
+${SOFTWARE_DIR}/annovar/table_annovar.pl \
 	${SV_DIR}/somatic_input.vcf \
 	/rawdata/software/annovar/humandb_ucsc/ \
 	--outfile ${SV_DIR}/annovar_somatic_table \
@@ -65,7 +65,7 @@ python2.7 ${SV_SCRIPTS}/updateAnnovarTable_v3.py \
 # Just noticed that somatic.vcf has duplicate entries, will need to correct this 
 
 # generate an xlsx file 
-python2.7 /rawdata/legos/scripts/QC/QC_generateSheets.py -s $SV_DIR -V -o ${DIR}/../${SAMPLE}_somatic.xlsx
+python2.7 ${SOFTWARE_DIR}/QC/QC_generateSheets.py -s $SV_DIR -V -o ${DIR}/../${SAMPLE}_somatic.xlsx
 
 # copy the final file back to my dir
 echo "copying ${SV_DIR}/annovar_summary.txt to /home/ionadmin/jeff/Lung_Somatic"
